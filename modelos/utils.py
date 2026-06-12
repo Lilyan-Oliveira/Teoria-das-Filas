@@ -5,6 +5,34 @@ import math
 import streamlit as st
 
 
+# ── Chaves de todos os campos de texto usados nos modelos ──────────────────────
+_TODAS_AS_CHAVES = [
+    # inputs_basicos
+    "lam", "mu", "rho", "tmc", "tms",
+    "W_in", "Wq_in", "L_in", "Lq_in",
+    # inputs_auxiliares
+    "n_val", "t_val", "x_val", "fator",
+    # específicos por modelo
+    "s_mms", "s_mmsk", "s_mmsn",
+    "K_mm1k", "K_mmsk",
+    "N_mm1n", "N_mmsn",
+    # M/G/1
+    "sigma2_mg1", "sigma_mg1",
+]
+
+
+def botao_limpar():
+    """
+    Renderiza um botão 🗑️ Limpar campos na sidebar.
+    Ao clicar, zera todos os campos de texto de todos os modelos via session_state.
+    """
+    if st.sidebar.button("🗑️ Limpar campos", use_container_width=True):
+        for chave in _TODAS_AS_CHAVES:
+            if chave in st.session_state:
+                st.session_state[chave] = ""
+        st.rerun()
+
+
 def safe(val):
     """Converte string para float; retorna None se vazio ou inválido."""
     if val is None:
