@@ -18,7 +18,11 @@ _TODAS_AS_CHAVES = [
     "N_mm1n", "N_mmsn",
     # M/G/1
     "sigma2_mg1", "sigma_mg1",
+    # Prioridades (chaves fixas; dinâmicas limpas por prefixo em botao_limpar)
+    "prio_disc", "prio_s", "prio_k", "prio_mu",
 ]
+
+_PREFIXOS_DINAMICOS = ("prio_lambda_", "prio_es_", "prio_var_")
 
 
 def botao_limpar():
@@ -29,6 +33,9 @@ def botao_limpar():
     if st.sidebar.button("🗑️ Limpar campos", use_container_width=True):
         for chave in _TODAS_AS_CHAVES:
             if chave in st.session_state:
+                st.session_state[chave] = ""
+        for chave in list(st.session_state.keys()):
+            if any(chave.startswith(p) for p in _PREFIXOS_DINAMICOS):
                 st.session_state[chave] = ""
         st.rerun()
 

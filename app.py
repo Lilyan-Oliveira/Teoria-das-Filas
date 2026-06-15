@@ -22,7 +22,7 @@ MODELOS = {
     "Prioridades":  "prioridades",
 }
 
-IMPLEMENTADOS = {"M/M/1", "M/M/s", "M/M/1/K", "M/M/s/K", "M/M/1/N", "M/M/s/N", "M/G/1"}
+IMPLEMENTADOS = {"M/M/1", "M/M/s", "M/M/1/K", "M/M/s/K", "M/M/1/N", "M/M/s/N", "M/G/1", "Prioridades"}
 
 with st.sidebar:
     st.title("📊 Teoria das Filas")
@@ -109,4 +109,6 @@ else:
             from modelos.mmsn import render
         elif modulo == "mg1":
             from modelos.mg1 import render
+        elif modulo == "prioridades":
+            from modelos.prioridades import render
         render()
