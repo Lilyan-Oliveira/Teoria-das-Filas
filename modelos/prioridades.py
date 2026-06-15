@@ -16,7 +16,12 @@ def _w_mms(lam, mu, s):
 
 def calcular_nao_preemptivo(lambdas, mu, s):
     """
-    Prioridade sem interrupção, atendimento exponencial, qualquer s.
+    Prioridade sem interrupção (não-preemptiva), atendimento exponencial, qualquer s.
+    Fórmula do slide 11:
+      r = Λ/μ,  Λ = Σλᵢ
+      A = s! · (sμ − Λ) / r^s · Σ(j=0..s-1) r^j/j!  +  sμ
+      Wk = 1 / (A · B_{k-1} · B_k)  +  1/μ
+      onde B_k = 1 − Σ(i=1..k) λᵢ / (sμ)
     Retorna lista de dicts {W, Wq, L, Lq} por classe (índice 0 = maior prioridade).
     """
     Lambda = sum(lambdas)
@@ -39,9 +44,13 @@ def calcular_nao_preemptivo(lambdas, mu, s):
 
 def calcular_preemptivo(lambdas, mu, s):
     """
-    Prioridade com interrupção, atendimento exponencial.
-    s=1: fórmula fechada de Hillier-Lieberman.
-    s>1: recursão via M/M/s (método dos slides 16-17).
+    Prioridade com interrupção (preemptiva), atendimento exponencial.
+    Fórmula do slide 10:
+      Wk = (1/μ) / [(1 − Σ(i=1..k-1) λᵢ/(sμ)) · (1 − Σ(i=1..k) λᵢ/(sμ))]
+    s=1: aplicação direta da fórmula fechada.
+    s>1: recursão via M/M/s conforme slides 16-17:
+      W_m = (Λ_m/λ_m)·W_MMs(Λ_m) − Σ_{i<m} (λᵢ/λ_m)·Wᵢ
+    Retorna lista de dicts {W, Wq, L, Lq} por classe (índice 0 = maior prioridade).
     """
     if s == 1:
         res = []
@@ -56,7 +65,7 @@ def calcular_preemptivo(lambdas, mu, s):
             B_ant = B_k
         return res
 
-    # s > 1: W_m = (Λ_m/λ_m)·W_MMs(Λ_m) − Σ_{i<m} (λ_i/λ_m)·W_i
+    # s > 1: W_m = (Λ_m/λ_m)·W_MMs(Λ_m) − Σ_{i<m} (λᵢ/λ_m)·Wᵢ
     Ws = []
     acum_lam = 0.0
     for m, lam_m in enumerate(lambdas):
@@ -76,7 +85,12 @@ def calcular_preemptivo(lambdas, mu, s):
 def calcular_mg1_prioridade(lambdas, es, vs):
     """
     M/G/1 com prioridades não-preemptiva, s=1.
-    es[i] = E(S_i) = 1/μ_i ; vs[i] = Var(S_i) = σ²_i.
+    Fórmula do slide 19 (Pollaczek-Khintchine estendida):
+      ρᵢ = λᵢ · E(Sᵢ)
+      num = Σᵢ λᵢ · [V(Sᵢ) + E(Sᵢ)²]
+      E(Wq_k) = num / [2 · (1 − Σ_{i<k} ρᵢ) · (1 − Σ_{i≤k} ρᵢ)]
+      E(Wk)   = E(Sk) + E(Wq_k)
+    es[i] = E(S_i) = 1/μᵢ ; vs[i] = Var(S_i) = σ²ᵢ.
     """
     rhos = [lam * e for lam, e in zip(lambdas, es)]
     num = sum(lam * (v + e**2) for lam, v, e in zip(lambdas, vs, es))
@@ -96,14 +110,18 @@ def calcular_mg1_prioridade(lambdas, es, vs):
 def render():
     import streamlit as st
     from modelos.utils import fmtp
+
     st.header("Modelo com Prioridades")
-    st.caption("Sem interrupção · Com interrupção (preemptiva) · M/G/1 com prioridades")
+    st.caption("Sem interrupção (M/M/s) · Com interrupção (M/M/s) · M/G/1 com prioridades")
 
     # ── Seletor de disciplina ──────────────────────────────────────────────────
     disc = st.radio(
         "**Disciplina de prioridade:**",
-        ["Sem interrupção (não-preemptiva)", "Com interrupção (preemptiva)",
-         "M/G/1 com prioridades (tempos gerais)"],
+        [
+            "Sem interrupção — M/M/s (não-preemptiva)",
+            "Com interrupção — M/M/s (preemptiva)",
+            "M/G/1 com prioridades (não-preemptiva)",
+        ],
         key="prio_disc",
         horizontal=True,
     )
@@ -116,7 +134,7 @@ def render():
     with col_s:
         if mg1_mode:
             s = 1
-            st.info("M/G/1 com prioridades: s = 1 (servidor único).")
+            st.info("M/G/1 com prioridades: restrito a **s = 1** servidor por definição do modelo.")
         else:
             s = st.number_input("s — número de atendentes", min_value=1, value=1,
                                 step=1, key="prio_s")
@@ -128,17 +146,15 @@ def render():
     k = int(k)
     s = int(s)
 
-    # ── Campos por classe ──────────────────────────────────────────────────────
-    st.markdown("**μ global (taxa de atendimento)**" if not mg1_mode else
-                "**Entradas por classe** (E(Sᵢ) = 1/μᵢ)")
-
+    # ── μ global (modos M/M/s) ou entradas por classe (M/G/1) ─────────────────
     if not mg1_mode:
-        mu_raw = st.text_input("μ — taxa de atendimento (igual para todas as classes)",
-                               placeholder="ex: 3", key="prio_mu")
+        st.markdown("**μ — taxa de atendimento (igual para todas as classes)**")
+        mu_raw = st.text_input("μ", placeholder="ex: 3", key="prio_mu")
         mu = safe(mu_raw)
     else:
-        mu = None  # não usado no modo M/G/1
+        mu = None
 
+    # ── Campos por classe ──────────────────────────────────────────────────────
     st.markdown("**Taxas de chegada por classe** (classe 1 = maior prioridade)")
     lambdas = []
     es_list = []
@@ -164,7 +180,7 @@ def render():
                                     placeholder="ex: 2", key=f"prio_lambda_{i}"))
             lambdas.append(lv)
 
-    # ── Validação de entradas ──────────────────────────────────────────────────
+    # ── Validação e cálculo ────────────────────────────────────────────────────
     st.markdown("---")
     st.markdown("### Saídas")
 
@@ -187,6 +203,19 @@ def render():
         _exibir_resultados(resultados, lambdas, mu_global=None, mg1_mode=True,
                            es_list=es_list)
 
+        with st.expander("📐 Fórmulas — M/G/1 com prioridades (slide 19)"):
+            st.latex(r"\rho_i = \lambda_i \cdot E(S_i)")
+            st.latex(
+                r"E(W_{q_k}) = \frac{\displaystyle\sum_{i=1}^{r}"
+                r"\lambda_i\!\left[V(S_i) + E(S_i)^2\right]}"
+                r"{2\!\left(1 - \displaystyle\sum_{i=1}^{k-1}\rho_i\right)"
+                r"\!\left(1 - \displaystyle\sum_{i=1}^{k}\rho_i\right)}"
+            )
+            st.latex(r"E(W_k) = E(S_k) + E(W_{q_k})")
+            st.latex(r"L_k = \lambda_k \cdot E(W_k)")
+            st.latex(r"L_{q_k} = \lambda_k \cdot E(W_{q_k})")
+            st.caption("r = número total de classes. O numerador soma sobre todas as classes.")
+
     else:
         if mu is None or mu <= 0:
             st.warning("⚠️ Informe μ (taxa de atendimento).")
@@ -205,10 +234,43 @@ def render():
 
         if disc.startswith("Sem"):
             resultados = calcular_nao_preemptivo(lambdas, mu, s)
+            _exibir_resultados(resultados, lambdas, mu_global=mu)
+
+            with st.expander("📐 Fórmulas — Sem interrupção / não-preemptiva (slide 11)"):
+                st.latex(r"r = \frac{\Lambda}{\mu} \qquad \Lambda = \sum_{i=1}^{k}\lambda_i")
+                st.latex(
+                    r"W_k = \frac{1}{\left["
+                    r"s!\,\dfrac{s\mu - \Lambda}{r^s}"
+                    r"\displaystyle\sum_{j=0}^{s-1}\frac{r^j}{j!}"
+                    r"+ s\mu\right]"
+                    r"\!\left(1 - \dfrac{\displaystyle\sum_{i=1}^{k-1}\lambda_i}{s\mu}\right)"
+                    r"\!\left(1 - \dfrac{\displaystyle\sum_{i=1}^{k}\lambda_i}{s\mu}\right)}"
+                    r"+ \frac{1}{\mu}"
+                )
+                st.latex(r"W_{q_k} = W_k - \frac{1}{\mu}")
+                st.latex(r"L_k = \lambda_k \cdot W_k")
+                st.latex(r"L_{q_k} = \lambda_k \cdot W_{q_k}")
+
         else:
             resultados = calcular_preemptivo(lambdas, mu, s)
+            _exibir_resultados(resultados, lambdas, mu_global=mu)
 
-        _exibir_resultados(resultados, lambdas, mu_global=mu)
+            with st.expander("📐 Fórmulas — Com interrupção / preemptiva (slide 10)"):
+                st.latex(
+                    r"W_k = \frac{1/\mu}{"
+                    r"\left(1 - \dfrac{\displaystyle\sum_{i=1}^{k-1}\lambda_i}{s\mu}\right)"
+                    r"\left(1 - \dfrac{\displaystyle\sum_{i=1}^{k}\lambda_i}{s\mu}\right)}"
+                )
+                st.latex(r"W_{q_k} = W_k - \frac{1}{\mu}")
+                st.latex(r"L_k = \lambda_k \cdot W_k")
+                st.latex(r"L_{q_k} = \lambda_k \cdot W_{q_k}")
+                if s > 1:
+                    st.markdown("**Para s > 1**, cada Wₖ é obtido via recursão (slides 16-17):")
+                    st.latex(
+                        r"W_m = \frac{\Lambda_m}{\lambda_m}\,W_{\text{M/M/s}}(\Lambda_m)"
+                        r"- \sum_{i=1}^{m-1}\frac{\lambda_i}{\lambda_m}\,W_i"
+                    )
+                    st.latex(r"\Lambda_m = \sum_{i=1}^{m} \lambda_i")
 
 
 def _exibir_resultados(resultados, lambdas, mu_global, mg1_mode=False, es_list=None):

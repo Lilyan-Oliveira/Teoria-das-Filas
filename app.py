@@ -66,6 +66,10 @@ with st.sidebar:
 | K | capacidade máxima (M/M/s/K) |
 | N | tamanho da população (M/M/s/N) |
 | σ² | variância do tempo de serviço (M/G/1) |
+| E(Sᵢ) | tempo médio de serviço da classe i — E(Sᵢ) = 1/μᵢ (prioridades M/G/1) |
+| V(Sᵢ) | variância do tempo de serviço da classe i (prioridades M/G/1) |
+| ρᵢ | utilização da classe i — ρᵢ = λᵢ · E(Sᵢ) (prioridades M/G/1) |
+| Λ | taxa de chegada total — Λ = Σλᵢ (modelos com prioridades) |
 """)
 
 # ── inicializar página padrão ──────────────────────────────────────────────────

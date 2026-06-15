@@ -95,3 +95,23 @@ def render():
                   fmtp((math.exp(-mp) * mp ** x) / fl), help="e^(−μ)·μˣ/x!")
     else:
         st.caption("Informe **x** (e fator, se necessário) para calcular P(X=x).")
+
+    with st.expander("📐 Fórmulas — M/M/1"):
+        st.markdown("**Condição de estabilidade:** λ < μ  →  ρ < 1")
+        st.markdown("#### Parâmetro")
+        st.latex(r"\rho = \frac{\lambda}{\mu}")
+        st.markdown("#### Probabilidades de estado")
+        st.latex(r"P_0 = 1 - \rho")
+        st.latex(r"P_n = (1 - \rho)\,\rho^n")
+        st.latex(r"P(N > n) = \rho^{n+1}")
+        st.latex(r"P(N \leq n) = 1 - \rho^{n+1}")
+        st.markdown("#### Medidas de efetividade")
+        st.latex(r"L = \frac{\lambda}{\mu - \lambda}")
+        st.latex(r"L_q = \frac{\lambda^2}{\mu(\mu - \lambda)}")
+        st.latex(r"W = \frac{1}{\mu - \lambda}")
+        st.latex(r"W_q = \frac{\lambda}{\mu(\mu - \lambda)}")
+        st.markdown("#### Probabilidades de tempo")
+        st.latex(r"P(W > t) = e^{-\mu(1-\rho)\,t}")
+        st.latex(r"P(W_q > t) = \rho \cdot e^{-\mu(1-\rho)\,t}")
+        st.markdown("#### Distribuição de Poisson")
+        st.latex(r"P(X = x) = \frac{e^{-\lambda}\,\lambda^x}{x!}")

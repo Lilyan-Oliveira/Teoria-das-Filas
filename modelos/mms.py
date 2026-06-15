@@ -150,3 +150,28 @@ def render():
         c2.metric(f"P(Wq>{fmt(t_val)})", fmtp(PWqt), help="(1−P(Wq=0))·e^(−sμ(1−ρ)t)")
     else:
         st.caption("Informe **t** para calcular P(W>t) e P(Wq>t).")
+
+    with st.expander("📐 Fórmulas — M/M/s"):
+        st.markdown("**Condição de estabilidade:** λ < s·μ  →  ρ < 1")
+        st.markdown("#### Parâmetro")
+        st.latex(r"\rho = \frac{\lambda}{s\,\mu}")
+        st.markdown("#### Probabilidade de estado 0")
+        st.latex(
+            r"P_0 = \frac{1}{\displaystyle\sum_{n=0}^{s-1}\frac{(\lambda/\mu)^n}{n!}"
+            r"+ \frac{(\lambda/\mu)^s}{s!\,(1 - \lambda/(s\mu))}}"
+        )
+        st.markdown("#### Probabilidade de estado n")
+        st.latex(r"P_n = \frac{(\lambda/\mu)^n}{n!}\,P_0 \qquad (0 \leq n \leq s)")
+        st.latex(r"P_n = \frac{(\lambda/\mu)^n}{s!\,s^{n-s}}\,P_0 \qquad (n > s)")
+        st.markdown("#### Medidas de efetividade")
+        st.latex(r"L_q = \frac{P_0\,(\lambda/\mu)^s\,\rho}{s!\,(1-\rho)^2}")
+        st.latex(r"W_q = \frac{L_q}{\lambda}")
+        st.latex(r"L = L_q + \frac{\lambda}{\mu}")
+        st.latex(r"W = \frac{L}{\lambda}")
+        st.markdown("#### Probabilidades de tempo")
+        st.latex(
+            r"P(W > t) = e^{-\mu t}\left[1 + \frac{P_0\,(\lambda/\mu)^s}{s!\,(1-\rho)}"
+            r"\cdot\frac{1 - e^{-\mu t(s-1-\lambda/\mu)}}{s-1-\lambda/\mu}\right]"
+        )
+        st.latex(r"P(W_q > t) = \left[1 - P(W_q = 0)\right] e^{-s\mu(1-\rho)\,t}")
+        st.latex(r"P(W_q = 0) = \sum_{n=0}^{s-1} P_n")
