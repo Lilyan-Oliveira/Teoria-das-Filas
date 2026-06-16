@@ -3,8 +3,8 @@ Modelo M/M/1/N — fila única, servidor único, população finita N.
 """
 import math
 import streamlit as st
-from modelos.utils import (fmt, fmtp, inputs_basicos, render_parametros,
-                           resolve_mm1, safe)
+from modelos.utils import (fmt, fmtp, inputs_basicos, inputs_auxiliares,
+                           render_parametros, resolve_mm1, safe)
 
 
 def calcular(lam, mu, N):
@@ -23,6 +23,17 @@ def calcular(lam, mu, N):
     return dict(P0=P0, L=L, Lq=Lq, lam_ef=lam_ef, W=W, Wq=Wq)
 
 
+def calcular_Pn(lam, mu, N, P0, n):
+    """
+    Pn = P0 · N!/(N-n)! · (λ/μ)ⁿ,  para n = 0, 1, ..., N
+    Fórmula do slide M/M/1/N — equações básicas.
+    """
+    if n > N:
+        return 0.0
+    r = lam / mu
+    return P0 * math.perm(N, n) * r ** n
+
+
 def render():
     st.header("Modelo M/M/1/N")
     st.caption("Fila única · Servidor único · População finita N")
@@ -31,6 +42,8 @@ def render():
     N_val = safe(N_raw)
 
     inp = inputs_basicos()
+    aux = inputs_auxiliares(com_n=True, com_t=False, com_x=False, com_fator=False)
+
     lam, mu, rho = resolve_mm1(**inp)
     render_parametros(lam, mu, rho)
 
@@ -63,6 +76,26 @@ def render():
     c1, c2 = st.columns(2)
     c1.metric("P(0) — sistema vazio", fmtp(res["P0"]),    help="1 / Σ perm(N,n)·(λ/μ)ⁿ")
     c2.metric("λ̄ — taxa efetiva",    fmt(res["lam_ef"]), help="λ · (N − L)")
+
+    st.markdown("**Unidades operacionais**")
+    st.metric("N − L — unidades operacionais", fmt(N - res["L"]),
+              help="N menos o número médio fora de serviço (em reparo ou aguardando)")
+
+    # ── Auxiliares opcionais ───────────────────────────────────────────────────
+    n_val = aux.get("n_val")
+    if n_val is not None and float(n_val) == int(n_val) and n_val >= 0:
+        n = int(n_val)
+        if n > N:
+            st.warning(f"⚠️ n = {n} > N = {N}. P(N=n) = 0 para n acima da população.")
+        else:
+            Pn  = calcular_Pn(lam, mu, N, res["P0"], n)
+            Pgt = sum(calcular_Pn(lam, mu, N, res["P0"], i) for i in range(n + 1, N + 1))
+            st.markdown("**Probabilidades de estado**")
+            c1, c2 = st.columns(2)
+            c1.metric(f"P(N={n})",  fmtp(Pn),  help="P₀ · N!/(N−n)! · (λ/μ)ⁿ")
+            c2.metric(f"P(N>{n})",  fmtp(Pgt), help="Σ Pᵢ, i=n+1..N")
+    else:
+        st.caption("Informe **n** para calcular P(N=n) e P(N>n).")
 
     with st.expander("📐 Fórmulas — M/M/1/N"):
         st.latex(

@@ -5,8 +5,8 @@ import math
 import streamlit as st
 
 
-# ── Chaves de todos os campos de texto usados nos modelos ──────────────────────
-_TODAS_AS_CHAVES = [
+# ── Chaves de campos de TEXTO (text_input) — recebem "" ao limpar ─────────────
+_CHAVES_TEXTO = [
     # inputs_basicos
     "lam", "mu", "rho", "tmc", "tms",
     "W_in", "Wq_in", "L_in", "Lq_in",
@@ -18,8 +18,14 @@ _TODAS_AS_CHAVES = [
     "N_mm1n", "N_mmsn",
     # M/G/1
     "sigma2_mg1", "sigma_mg1",
-    # Prioridades (chaves fixas; dinâmicas limpas por prefixo em botao_limpar)
-    "prio_disc", "prio_s", "prio_k", "prio_mu",
+    # Prioridades — campos de texto
+    "prio_mu",
+]
+
+# ── Chaves de widgets NÃO-TEXTO (radio, number_input) — deletadas ao limpar ───
+# st.radio e st.number_input não aceitam "" como valor; precisam ser deletados
+_CHAVES_DELETAR = [
+    "prio_disc", "prio_s", "prio_k",
 ]
 
 _PREFIXOS_DINAMICOS = ("prio_lambda_", "prio_es_", "prio_var_")
@@ -28,12 +34,20 @@ _PREFIXOS_DINAMICOS = ("prio_lambda_", "prio_es_", "prio_var_")
 def botao_limpar():
     """
     Renderiza um botão 🗑️ Limpar campos na sidebar.
-    Ao clicar, zera todos os campos de texto de todos os modelos via session_state.
+    Ao clicar:
+      - campos text_input recebem "" (volta ao placeholder)
+      - campos radio/number_input são deletados do session_state (volta ao default)
     """
     if st.sidebar.button("🗑️ Limpar campos", use_container_width=True):
-        for chave in _TODAS_AS_CHAVES:
+        # Zera campos de texto
+        for chave in _CHAVES_TEXTO:
             if chave in st.session_state:
                 st.session_state[chave] = ""
+        # Deleta campos radio/number_input
+        for chave in _CHAVES_DELETAR:
+            if chave in st.session_state:
+                del st.session_state[chave]
+        # Zera campos dinâmicos de prioridades (text_input em loop)
         for chave in list(st.session_state.keys()):
             if any(chave.startswith(p) for p in _PREFIXOS_DINAMICOS):
                 st.session_state[chave] = ""
@@ -84,16 +98,16 @@ def inputs_basicos():
 
     col1, col2 = st.columns(2)
     with col1:
-        lam   = st.text_input("λ — taxa de chegada",                      placeholder="ex: 4",    key="lam")
-        mu    = st.text_input("μ — taxa de atendimento",                   placeholder="ex: 5",    key="mu")
-        rho   = st.text_input("ρ — taxa de utilização",                    placeholder="ex: 0.8",  key="rho")
-        tmc   = st.text_input("TMC — tempo médio entre chegadas (λ=1/TMC)",placeholder="ex: 15",   key="tmc")
-        tms   = st.text_input("TMS — tempo médio de serviço (μ=1/TMS)",    placeholder="ex: 12",   key="tms")
+        lam   = st.text_input("λ — taxa de chegada",                       placeholder="ex: 4",     key="lam")
+        mu    = st.text_input("μ — taxa de atendimento",                    placeholder="ex: 5",     key="mu")
+        rho   = st.text_input("ρ — taxa de utilização",                     placeholder="ex: 0.8",   key="rho")
+        tmc   = st.text_input("TMC — tempo médio entre chegadas (λ=1/TMC)", placeholder="ex: 15",    key="tmc")
+        tms   = st.text_input("TMS — tempo médio de serviço (μ=1/TMS)",     placeholder="ex: 12",    key="tms")
     with col2:
-        W_in  = st.text_input("W  — tempo médio no sistema",               placeholder="ex: 18.75",key="W_in")
-        Wq_in = st.text_input("Wq — tempo médio na fila",                  placeholder="ex: 15",   key="Wq_in")
-        L_in  = st.text_input("L  — número médio no sistema",              placeholder="ex: 4",    key="L_in")
-        Lq_in = st.text_input("Lq — número médio na fila",                 placeholder="ex: 3.2",  key="Lq_in")
+        W_in  = st.text_input("W  — tempo médio no sistema",                placeholder="ex: 18.75", key="W_in")
+        Wq_in = st.text_input("Wq — tempo médio na fila",                   placeholder="ex: 15",    key="Wq_in")
+        L_in  = st.text_input("L  — número médio no sistema",               placeholder="ex: 4",     key="L_in")
+        Lq_in = st.text_input("Lq — número médio na fila",                  placeholder="ex: 3.2",   key="Lq_in")
 
     return dict(lam=safe(lam), mu=safe(mu), rho=safe(rho),
                 tmc=safe(tmc), tms=safe(tms),
@@ -215,29 +229,7 @@ def check_estabilidade(lam, mu, rho=None):
     Retorna (estavel: bool, rho: float|None).
     """
     if lam is None or mu is None:
-        return False, rho
+        return False, None
     if rho is None:
         rho = lam / mu
     return rho < 1, rho
-
-
-def glossario():
-    """Exibe glossário expansível."""
-    with st.expander("📖 Glossário — nomes alternativos dos parâmetros"):
-        st.markdown("""
-| Nome no exercício | Símbolo | Relação |
-|---|---|---|
-| Taxa de chegada | λ | entrada direta |
-| Tempo médio entre chegadas (TMC) | → λ | λ = 1/TMC |
-| Taxa de atendimento | μ | entrada direta |
-| Tempo médio de serviço (TMS) | → μ | μ = 1/TMS |
-| Taxa de utilização / ocupação | ρ | ρ = λ/μ |
-| Tempo médio na fila (TF) | Wq | saída calculada |
-| Tempo médio no sistema (TS) | W | saída calculada |
-| Nº médio de clientes na fila | Lq | saída calculada |
-| Nº médio de clientes no sistema | L | saída calculada |
-| Nº de servidores/canais | s | entrada (M/M/s e derivados) |
-| Capacidade máxima do sistema | K | entrada (M/M/s/K) |
-| Tamanho da população | N | entrada (M/M/s/N) |
-| Variância do tempo de serviço | σ² | entrada (M/G/1) |
-""")

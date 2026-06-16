@@ -4,8 +4,8 @@ Todas as fórmulas dos slides Teoria_das_filas_Modelo_MMsK_e_MMsN.pdf (págs. 21
 """
 import math
 import streamlit as st
-from modelos.utils import (fmt, fmtp, inputs_basicos, render_parametros,
-                           resolve_mm1, safe)
+from modelos.utils import (fmt, fmtp, inputs_basicos, inputs_auxiliares,
+                           render_parametros, resolve_mm1, safe)
 
 
 def calcular_Pn(lam, mu, s, N, P0, n):
@@ -87,6 +87,8 @@ def render():
     N_val = safe(N_raw)
 
     inp = inputs_basicos()
+    aux = inputs_auxiliares(com_n=True, com_t=False, com_x=False, com_fator=False)
+
     lam, mu, rho_mm1 = resolve_mm1(**inp)
     render_parametros(lam, mu, rho_mm1)
 
@@ -127,9 +129,31 @@ def render():
     c4.metric("Lq", fmt(res["Lq"]), help="L − (λ/μ)·(N − L)")
 
     st.markdown("**Probabilidades**")
-    c1, c2 = st.columns(2)
-    c1.metric("P(0) — sistema vazio", fmtp(res["P0"]), help="fórmula somatório slides pág. 21")
-    c2.metric("λ̄ — taxa efetiva",    fmt(res["lam_ef"]), help="λ · (N − L)")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("P(0) — sistema vazio",       fmtp(res["P0"]),          help="fórmula somatório slides pág. 21")
+    c2.metric("λ̄ — taxa efetiva",           fmt(res["lam_ef"]),       help="λ · (N − L)")
+    c3.metric("1 − ρ — ocioso/servidor",    fmtp(1 - res["lam_ef"] / (s * mu)),     help="1 − λ̄/(s·μ) — proporção de tempo que cada servidor fica sem atender")
+
+    st.markdown("**Unidades operacionais**")
+    st.metric("N − L — unidades operacionais", fmt(N - res["L"]),
+              help="N menos o número médio fora de serviço (em reparo ou aguardando)")
+
+    # ── Auxiliares opcionais ───────────────────────────────────────────────────
+    n_val = aux.get("n_val")
+    if n_val is not None and float(n_val) == int(n_val) and n_val >= 0:
+        n = int(n_val)
+        if n > N:
+            st.warning(f"⚠️ n = {n} > N = {N}. P(N=n) = 0 para n acima da população.")
+        else:
+            Pn  = calcular_Pn(lam, mu, s, N, res["P0"], n)
+            Pgt = sum(calcular_Pn(lam, mu, s, N, res["P0"], i) for i in range(n + 1, N + 1))
+            st.markdown("**Probabilidades de estado**")
+            c1, c2 = st.columns(2)
+            c1.metric(f"P(N={n})",  fmtp(Pn),
+                      help="N!/[(N−n)!·n!]·(λ/μ)ⁿ·P₀  (n≤s)  ou  N!/[(N−n)!·s!·sⁿ⁻ˢ]·(λ/μ)ⁿ·P₀  (n>s)")
+            c2.metric(f"P(N>{n})",  fmtp(Pgt), help="Σ Pᵢ, i=n+1..N")
+    else:
+        st.caption("Informe **n** para calcular P(N=n) e P(N>n).")
 
     with st.expander("📐 Fórmulas — M/M/s/N"):
         st.latex(r"\rho = \frac{N\lambda}{s\,\mu}")

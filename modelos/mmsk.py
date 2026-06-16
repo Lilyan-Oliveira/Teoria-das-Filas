@@ -3,8 +3,8 @@ Modelo M/M/s/K — fila única, múltiplos servidores, capacidade máxima K.
 """
 import math
 import streamlit as st
-from modelos.utils import (fmt, fmtp, inputs_basicos, render_parametros,
-                           resolve_mm1, safe)
+from modelos.utils import (fmt, fmtp, inputs_basicos, inputs_auxiliares,
+                           render_parametros, resolve_mm1, safe)
 
 
 def calcular(lam, mu, s, K):
@@ -32,6 +32,20 @@ def calcular(lam, mu, s, K):
     return dict(rho=rho, P0=P0, PK=PK, lam_ef=lam_ef, L=L, Lq=Lq, W=W, Wq=Wq)
 
 
+def calcular_Pn(lam, mu, s, K, P0, n):
+    """
+    Pn = (λ/μ)ⁿ / n! · P0,           para n ≤ s
+    Pn = (λ/μ)ⁿ / (s! · sⁿ⁻ˢ) · P0, para s < n ≤ K
+    Fórmula do slide M/M/s/K — equações básicas.
+    """
+    if n > K:
+        return 0.0
+    r = lam / mu
+    if n <= s:
+        return r ** n / math.factorial(n) * P0
+    return r ** n / (math.factorial(s) * s ** (n - s)) * P0
+
+
 def render():
     st.header("Modelo M/M/s/K")
     st.caption("Fila única · Múltiplos servidores · Capacidade máxima K")
@@ -46,6 +60,8 @@ def render():
     K_val = safe(K_raw)
 
     inp = inputs_basicos()
+    aux = inputs_auxiliares(com_n=True, com_t=False, com_x=False, com_fator=False)
+
     lam, mu, rho = resolve_mm1(**inp)
     render_parametros(lam, mu, rho)
 
@@ -90,6 +106,23 @@ def render():
     c1.metric("P(0) — sistema vazio", fmtp(res["P0"]),    help="fórmula somatório slides")
     c2.metric("P(K) — sistema cheio", fmtp(res["PK"]),    help="Pₖ calculado via fórmula Pn")
     c3.metric("λ̄ — taxa efetiva",    fmt(res["lam_ef"]), help="λ · (1 − P(K))")
+
+    # ── Auxiliares opcionais ───────────────────────────────────────────────────
+    n_val = aux.get("n_val")
+    if n_val is not None and float(n_val) == int(n_val) and n_val >= 0:
+        n = int(n_val)
+        if n > K:
+            st.warning(f"⚠️ n = {n} > K = {K}. P(N=n) = 0 para n acima da capacidade.")
+        else:
+            Pn  = calcular_Pn(lam, mu, s, K, res["P0"], n)
+            Pgt = sum(calcular_Pn(lam, mu, s, K, res["P0"], i) for i in range(n + 1, K + 1))
+            st.markdown("**Probabilidades de estado**")
+            c1, c2 = st.columns(2)
+            c1.metric(f"P(N={n})",  fmtp(Pn),
+                      help="(λ/μ)ⁿ/n!·P₀  (n≤s)  ou  (λ/μ)ⁿ/(s!·sⁿ⁻ˢ)·P₀  (n>s)")
+            c2.metric(f"P(N>{n})",  fmtp(Pgt), help="Σ Pᵢ, i=n+1..K")
+    else:
+        st.caption("Informe **n** para calcular P(N=n) e P(N>n).")
 
     with st.expander("📐 Fórmulas — M/M/s/K"):
         st.latex(r"\rho = \frac{\lambda}{s\,\mu}")
