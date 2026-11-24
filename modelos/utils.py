@@ -198,6 +198,16 @@ def resolve_mm1(lam, mu, rho, tmc, tms, W_in, Wq_in, L_in, Lq_in):
                 if cand is not None:
                     mu = cand; changed = True
 
+        # μ e Wq: Wq = λ/(μ(μ−λ))  →  λ = Wq·μ² / (1 + Wq·μ)
+        if mu is not None and lam is None and Wq_in is not None and Wq_in > 0:
+            lam = Wq_in * mu ** 2 / (1 + Wq_in * mu); changed = True
+
+        # Lq e W: μ = λ + 1/W e Lq = λ²·W/μ  →  W·λ² − Lq·λ − Lq/W = 0
+        if (Lq_in is not None and Lq_in > 0 and W_in is not None and W_in > 0
+                and lam is None and mu is None):
+            lam = (Lq_in + math.sqrt(Lq_in ** 2 + 4 * Lq_in)) / (2 * W_in)
+            mu = lam + 1 / W_in; changed = True
+
         if L_in is not None and W_in is not None and lam is None and W_in > 0:
             lam = L_in / W_in; changed = True
         if Lq_in is not None and Wq_in is not None and lam is None and Wq_in > 0:
