@@ -27,8 +27,6 @@ IMPLEMENTADOS = {"M/M/1", "M/M/s", "M/M/1/K", "M/M/s/K", "M/M/1/N", "M/M/s/N", "
 with st.sidebar:
     st.title("📊 Teoria das Filas")
     st.caption("Trabalho desenvolvido por:")
-    st.caption("Lilyan Oliveira · 301GES")
-    st.caption("Matheus Vieira · 525GES")
     st.caption("Warley Ruivo · 424GES")
     st.markdown("---")
 
